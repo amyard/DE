@@ -1,6 +1,10 @@
 from datetime import datetime
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+import logging
+
+log_file = 'script_log.log'
+logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 default_args = {
     'owner': 'delme',
@@ -37,14 +41,26 @@ def stream_data():
     from kafka import KafkaProducer
     import time
 
-    res = get_data()
-    res = format_data(res)
-    # print(json.dumps(res, indent=4))
 
     # ['localhost:9092'] - is you don't use docker for running - you run it manually on local machine
     # ['broker:29092'] - is you run dag from docker machine
     producer = KafkaProducer(bootstrap_servers=['broker:29092'], max_block_ms = 5000)
-    producer.send('users_created', json.dumps(res).encode('utf-8'))
+
+    current_time = time.time()
+
+    while True:
+        # produce real time only for 1 minute
+        if time.time() > current_time + 60: # 1minute
+            break
+        try:
+            res = get_data()
+            res = format_data(res)
+            producer.send('users_created', json.dumps(res).encode('utf-8'))
+        except Exception as e:
+            logging.error('An error occurred: {}'.format(e))
+            continue
+
+
 
 with DAG('user_automation',
          default_args=default_args,

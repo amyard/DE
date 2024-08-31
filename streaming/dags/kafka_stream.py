@@ -60,8 +60,6 @@ def stream_data():
             logging.error('An error occurred: {}'.format(e))
             continue
 
-
-
 with DAG('user_automation',
          default_args=default_args,
          schedule_interval='@daily',

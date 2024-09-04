@@ -1,0 +1,10 @@
+faker==28.1.0
+apache-airflow==2.10.0
+apache-airflow-providers-microsoft-azure==10.4.0
+azure-storage-blob==12.22.0
+matplotlib==3.9.2
+seaborn==0.13.2
+python-dotenv==1.0.1
+numpy==1.26.4
+scipy==1.12.0
+scikit-learn==1.2.2

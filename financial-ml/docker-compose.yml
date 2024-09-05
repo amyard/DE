@@ -94,7 +94,7 @@ services:
       CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
       CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
-      CONFLIENT_METRICS_ENABLE: 'false'
+      CONFLUENT_METRICS_ENABLE: 'false'
       PORT: 9021
     networks:
       - confluent
@@ -112,7 +112,7 @@ services:
       - postgres
     environment:
       - LOAD_EX=n
-      - EXECUTOR=CeleryExecutor
+      - EXECUTOR=Sequential
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__WEBSERVER__SECRET_KEY=this_is_a_very_secured_key
       - AIRFLOW__WEBSERVER__WORKERS=4
@@ -157,7 +157,7 @@ services:
       - ./.env:/opt/airflow/.env
     environment:
       - LOAD_EX=n
-      - EXECUTOR=CeleryExecutor
+      - EXECUTOR=Sequential
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__WEBSERVER__SECRET_KEY=this_is_a_very_secured_key
       - AIRFLOW__CELERY__BROKER_URL=redis://redis:6379/0
@@ -188,7 +188,7 @@ services:
       - ./requirements.txt:/opt/airflow/requirements.txt
     environment:
       - LOAD_EX=n
-      - EXECUTOR=CeleryExecutor
+      - EXECUTOR=Sequential
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__CELERY__BROKER_URL=redis://redis:6379/0
       - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@postgres:5432/airflow
@@ -258,6 +258,38 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+  postgres-data:
+    image: postgres:14
+    container_name: postgres-data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    volumes:
+      - postgres_db:/var/lib/postgresql/data
+    ports:
+      - "5433:5433"
+    healthcheck:
+      test: [ 'CMD-SHELL', 'pg_isready -U airflow' ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - confluent
+
+  pgadmin:
+    image: dpage/pgadmin4:6.21
+    container_name: pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "8082:80"
+    depends_on:
+      - postgres-data
+    networks:
+      - confluent
 
 volumes:
   postgres_db:

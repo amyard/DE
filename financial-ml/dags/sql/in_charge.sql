@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS {{ params.table_name }} (
+    id UUID PRIMARY KEY,
+    amount INTEGER NOT NULL,
+    amount_captured INTEGER NOT NULL,
+    amount_refunded INTEGER NOT NULL,
+    currency VARCHAR(3) NOT NULL,
+    created TIMESTAMP NOT NULL,
+    customer_id UUID NOT NULL,
+    description TEXT,
+    disputed BOOLEAN NOT NULL,
+    outcome_network_status VARCHAR(50),
+    outcome_reason TEXT,
+    outcome_risk_level VARCHAR(50),
+    outcome_risk_score INTEGER,
+    paid BOOLEAN NOT NULL,
+    payment_intent UUID NOT NULL,
+    payment_method UUID NOT NULL,
+    payment_method_details_card_brand VARCHAR(50),
+    payment_method_details_card_country VARCHAR(2),
+    status VARCHAR(50) NOT NULL
+);

@@ -1,7 +1,7 @@
 """
 ### Helper DAG that generated mock data for the finance_elt DAG
 
-This DAG runs a script located in `include/create_mock_data.py` that generates
+This DAG runs a script located in `helpers/create_mock_data.py` that generates
 mock data for the finance_elt DAG and loads that mock data to S3/MinIO.
 """
 
@@ -13,7 +13,7 @@ from pathlib import Path
 from azure.storage.blob import BlobServiceClient
 from airflow.decorators import task, dag
 from airflow.providers.microsoft.azure.transfers.local_to_wasb import LocalFilesystemToWasbOperator
-from include.create_mock_data import generate_mock_data
+from helpers.create_mock_data import generate_mock_data
 from typing import Optional
 
 dotenv_path = Path(__file__).resolve().parent.parent / '.env'
@@ -22,7 +22,7 @@ load_dotenv()
 log_file = 'script_log.log'
 logging.basicConfig(filename=log_file, level=logging.INFO, filemode='w', format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-LOCAL_FOLDER_PATH = "dags/include/mock_data"
+LOCAL_FOLDER_PATH = "dags/helpers/mock_data"
 AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW='delme-storage-account'
 AZURE_CONTAINER_NAME=os.environ.get('AZURE_CONTAINER_NAME')
 AZURE_BLOB_STORAGE_CONN=os.environ.get('AZURE_STORAGE_CONNECTION_STRING')

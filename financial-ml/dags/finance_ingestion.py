@@ -22,9 +22,9 @@ load_dotenv()
 log_file = 'script_log.log'
 logging.basicConfig(filename=log_file, level=logging.INFO, filemode='w', format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-CONTAINER_NAME='finance-data'
-FOLDER_PATH = "dags/include/mock_data"
+LOCAL_FOLDER_PATH = "dags/include/mock_data"
 AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW='delme-storage-account'
+AZURE_CONTAINER_NAME=os.environ.get('AZURE_CONTAINER_NAME')
 AZURE_BLOB_STORAGE_CONN=os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
 
 
@@ -32,25 +32,25 @@ AZURE_BLOB_STORAGE_CONN=os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
     start_date=datetime(2024, 9, 3),
     schedule='@daily',
     catchup=False,
-    tags=['helper', 'mock_data']
+    tags=['helper', 'mock_data', 'delme', 'sql']
 )
 def upload_finance_data_pipeline():
     @task
     def generate_mock_data_task():
         logging.info("generate_mock_data_task")
-        generate_mock_data(FOLDER_PATH)
+        generate_mock_data(LOCAL_FOLDER_PATH)
 
     @task
     def prepare_kwargs_for_replacement_task():
         logging.info("prepare_kwargs_for_replacement_task")
 
         list_of_kwargs = []
-        for file_name in os.listdir(FOLDER_PATH):
+        for file_name in os.listdir(LOCAL_FOLDER_PATH):
             logging.info(f"file_name: {file_name}")
 
-            stripe_type = 'change' if "charge" in file_name else 'satisfaction'
+            stripe_type = 'charge' if "charge" in file_name else 'satisfaction'
             kwarg_dict = {
-                'file_path': f"{FOLDER_PATH}/{file_name}",
+                'file_path': f"{LOCAL_FOLDER_PATH}/{file_name}",
                 'blob_name': f"{stripe_type}/{file_name}"
             }
             logging.info(f"kwarg_dict: {kwarg_dict}")
@@ -75,16 +75,16 @@ def upload_finance_data_pipeline():
 
         def create_container(blob_client: Optional[BlobServiceClient]) -> bool:
             """
-            Create container 'CONTAINER_NAME' if not exists
+            Create container 'AZURE_CONTAINER_NAME' if not exists
             """
             try:
                 containers = blob_client.list_containers()
-                if CONTAINER_NAME not in containers:
-                    blob_client.create_container(CONTAINER_NAME)
-                    logging.info(f"Container '{CONTAINER_NAME}' created'.")
+                if AZURE_CONTAINER_NAME not in containers:
+                    blob_client.create_container(AZURE_CONTAINER_NAME)
+                    logging.info(f"Container '{AZURE_CONTAINER_NAME}' created'.")
                 return True
             except Exception as ex:
-                logging.error(f"Error with creating container '{CONTAINER_NAME}': {str(ex)}")
+                logging.error(f"Error with creating container '{AZURE_CONTAINER_NAME}': {str(ex)}")
                 return False
 
         blob_service_client = get_connection()
@@ -95,7 +95,7 @@ def upload_finance_data_pipeline():
     upload_mock_data = LocalFilesystemToWasbOperator.partial(
         wasb_conn_id = AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW,
         task_id='upload_mock_data',
-        container_name=CONTAINER_NAME,
+        container_name=AZURE_CONTAINER_NAME,
         load_options={"overwrite": True}
     ).expand_kwargs(upload_data_kwargs)
 

@@ -16,7 +16,7 @@ logging.basicConfig(filename=log_file, level=logging.INFO, filemode='w', format=
 
 fake = Faker()
 
-
+AMOUNT_OF_FILE_TO_GENERATE = 3
 
 def generate_mock_data(folder_path: str):
     folder_validation(folder_path)
@@ -86,7 +86,7 @@ def generate_satisfaction(customer_id, country_code):
 
 
 def produce_and_save_mock_data(folder_path: str):
-    for i in range(1, 3):
+    for i in range(1, AMOUNT_OF_FILE_TO_GENERATE):
         logging.info(f"produce_and_save_mock_data item_{i}")
         charge_filename = f"{folder_path}/stripe_charge_data_{i}.csv"
         satisfaction_filename = f"{folder_path}/stripe_satisfaction_data_{i}.csv"

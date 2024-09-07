@@ -11,6 +11,11 @@ from airflow.providers.microsoft.azure.sensors.wasb import WasbPrefixSensor
 from airflow.providers.microsoft.azure.hooks.wasb import WasbHook
 from airflow.operators.python import PythonOperator, get_current_context
 from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.utils.db import provide_session
+from airflow import DAG
+from airflow.models import XCom
+
 
 dotenv_path = Path(__file__).resolve().parent.parent / '.env'
 load_dotenv()
@@ -20,10 +25,19 @@ logging.basicConfig(filename=log_file, level=logging.INFO, filemode='w', format=
 
 
 AZURE_CONTAINER_NAME=os.environ.get('AZURE_CONTAINER_NAME')
-AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW='delme2'
+AZURE_STORAGE_ACCOUNT_NAME=os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW='delme-storage-account'
 POKE_INTERVAL = 1 * 10
-POSTGRES_CONN_ID = "delme-postgresql";
+POSTGRES_CONN_ID = "delme-postgresql"
 
+
+@provide_session
+def cleanup_xcom(task_id, session=None, **context):
+    # https://stackoverflow.com/questions/46707132/how-to-delete-xcom-objects-once-the-dag-finishes-its-run-in-airflow
+    dag = context["dag"]
+    dag_id = dag._dag_id
+    # It will delete all xcom of the dag_id
+    session.query(XCom).filter(XCom.dag_id == dag_id, XCom.task_id==task_id).delete()
 
 default_args = {
     'owner': 'me',
@@ -35,6 +49,7 @@ default_args = {
     default_args=default_args,
     schedule="@daily",
     catchup=False,
+    on_success_callback=cleanup_xcom,
     tags=['financial-ml', 'elt', 'delme'],
 )
 def finance_elt():
@@ -73,7 +88,7 @@ def finance_elt():
     #
     #         container_client = blob_service_client.get_container_client(AZURE_CONTAINER_NAME)
     #         blobs = container_client.list_blobs(name_starts_with=blob_name)
-    #         blob_names = [blob.name for blob in blobs]
+    #         blob_names = [f'https://{AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER_NAME}/{blob.name}' for blob in blobs]
     #         return blob_names
     #
     #     @task(task_id="get_blob_names_for_charge")
@@ -96,34 +111,58 @@ def finance_elt():
         task_id='start',
     )
 
-    # @task_group(group_id='phase_3_create_table_if_not_exists')
-    # def phase_3_create_table_if_not_exists():
-    #     create_charge_table = PostgresOperator(
-    #         task_id=f"create_charge_table",
-    #         postgres_conn_id=POSTGRES_CONN_ID,
-    #         sql="sql/in_charge.sql",
-    #         params={ 'table_name': 'in_charge' }
-    #     )
-    #
-    #     create_satisfaction_table = PostgresOperator(
-    #         task_id=f"create_satisfaction_table",
-    #         postgres_conn_id=POSTGRES_CONN_ID,
-    #         sql="sql/customer_satisfaction.sql",
-    #         params={'table_name': 'customer_satisfaction'}
-    #     )
-    #
-    #     create_model_training_table = PostgresOperator(
-    #         task_id=f"create_model_training_table",
-    #         postgres_conn_id=POSTGRES_CONN_ID,
-    #         sql="sql/model_training.sql",
-    #         params={'table_name': 'model_training'}
-    #     )
-    #
-    #     [create_charge_table, create_satisfaction_table, create_model_training_table]
+    @task_group(group_id='phase_3_create_table_if_not_exists')
+    def phase_3_create_table_if_not_exists():
+        create_charge_table = PostgresOperator(
+            task_id=f"create_charge_table",
+            postgres_conn_id=POSTGRES_CONN_ID,
+            sql="sql/in_charge.sql",
+            params={ 'table_name': 'in_charge' }
+        )
 
-    @task_group(group_id='phase_4_save_data_from_storage_to_db')
+        create_satisfaction_table = PostgresOperator(
+            task_id=f"create_satisfaction_table",
+            postgres_conn_id=POSTGRES_CONN_ID,
+            sql="sql/customer_satisfaction.sql",
+            params={'table_name': 'customer_satisfaction'}
+        )
+
+        create_model_training_table = PostgresOperator(
+            task_id=f"create_model_training_table",
+            postgres_conn_id=POSTGRES_CONN_ID,
+            sql="sql/model_training.sql",
+            params={'table_name': 'model_training'}
+        )
+
+        [create_charge_table, create_satisfaction_table, create_model_training_table]
+
+    @task(task_id='save_data_from_storage_to_db')
     def save_data_from_storage_to_db():
+        import requests
+        import tempfile
+        import os
 
+        # Download the file from the URL
+        url = 'https://delmestoragesaccount.blob.core.windows.net/finance-data/charge/stripe_charge_data_2.csv'
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            # Create a temporary file
+            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                temp_file.write(response.content)
+                temp_file_path = temp_file.name
+
+            # Now use the local file path for the copy_expert method
+            hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+            hook.copy_expert(
+                sql="COPY in_charge FROM stdin WITH DELIMITER as ',' CSV HEADER",
+                filename=temp_file_path
+            )
+
+            # Clean up the temporary file
+            os.remove(temp_file_path)
+        else:
+            raise Exception(f"Failed to download file: {response.status_code} - {response.text}")
 
 
     @task(task_id="finish")
@@ -133,7 +172,7 @@ def finance_elt():
 
 
     # start >> phase_1_wait_for_blobs() >> phase_2_get_blob_names()>> phase_3_create_table_if_not_exists()  >> finish()
-    start >> finish()
+    start >> phase_3_create_table_if_not_exists() >> save_data_from_storage_to_db() >> finish()
 
 
 

@@ -144,7 +144,7 @@ def produce_and_save_mock_data(folder_path: str):
                 satisfaction = generate_satisfaction(customer_id, country_code)
 
                 for _ in range(charge_count):
-                    stripe_id = f"ch_{fake.uuid4()}"
+                    stripe_id = fake.uuid4()
                     charge = generate_charge(
                         stripe_id,
                         country_code,

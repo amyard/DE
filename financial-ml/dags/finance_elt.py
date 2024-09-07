@@ -4,30 +4,31 @@ from pendulum import datetime
 from datetime import timedelta, datetime
 from dotenv import load_dotenv
 from pathlib import Path
+from typing import Optional, Any, List
 
-from airflow.operators.empty import EmptyOperator
+from airflow.models import XCom
 from airflow.decorators import dag, task, task_group
+from airflow.operators.empty import EmptyOperator
 from airflow.providers.microsoft.azure.sensors.wasb import WasbPrefixSensor
 from airflow.providers.microsoft.azure.hooks.wasb import WasbHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.utils.db import provide_session
-from airflow.models import XCom
 
 
 dotenv_path = Path(__file__).resolve().parent.parent / '.env'
 load_dotenv()
 
-log_file = 'script_log.log'
+log_file: str = 'script_log.log'
 logging.basicConfig(filename=log_file, level=logging.INFO, filemode='w', format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
-AZURE_CONTAINER_NAME=os.environ.get('AZURE_CONTAINER_NAME')
-AZURE_CONTAINER_ARCHIVE=os.environ.get('AZURE_CONTAINER_ARCHIVE')
-AZURE_STORAGE_ACCOUNT_NAME=os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW='delme-storage-account'
-POKE_INTERVAL = 1 * 10
-POSTGRES_CONN_ID = "delme-postgresql"
+AZURE_CONTAINER_NAME: Optional[str] = os.environ.get('AZURE_CONTAINER_NAME')
+AZURE_CONTAINER_ARCHIVE: Optional[str] = os.environ.get('AZURE_CONTAINER_ARCHIVE')
+AZURE_STORAGE_ACCOUNT_NAME: Optional[str] = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW: str ='delme-storage-account'
+POKE_INTERVAL: int = 1 * 10
+POSTGRES_CONN_ID: str = "delme-postgresql"
 
 
 @provide_session
@@ -53,7 +54,7 @@ default_args = {
 )
 def finance_elt():
     @task_group(group_id='phase_1_wait_for_blobs')
-    def phase_1_wait_for_blobs():
+    def phase_1_wait_for_blobs() -> None:
         wait_for_satisfaction=WasbPrefixSensor(
             task_id="wait_for_blobs_charge",
             wasb_conn_id=AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW,
@@ -78,8 +79,8 @@ def finance_elt():
 
     @task_group(group_id='phase_2_get_blob_names')
     def phase_2_get_blob_names():
-        def get_blob_names_from_container(blob_name: str, **kwargs) -> list[str]:
-            hook = WasbHook(wasb_conn_id=AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW)
+        def get_blob_names_from_container(blob_name: str, **kwargs: Any) -> List[str]:
+            hook: WasbHook = WasbHook(wasb_conn_id=AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW)
             blob_service_client = hook.blob_service_client
 
             if blob_service_client is None:
@@ -87,19 +88,19 @@ def finance_elt():
 
             container_client = blob_service_client.get_container_client(AZURE_CONTAINER_NAME)
             blobs = container_client.list_blobs(name_starts_with=blob_name)
-            blob_names = [blob.name for blob in blobs]
+            blob_names: List[str] = [blob.name for blob in blobs]
             return blob_names
 
         @task(task_id="get_blob_names_for_charge")
-        def get_blob_names_for_charge(blob_name: str):
+        def get_blob_names_for_charge(blob_name: str) -> List[str]:
             return get_blob_names_from_container(blob_name)
 
         @task(task_id="get_blob_names_for_satisfaction")
-        def get_blob_names_for_satisfaction(blob_name: str):
+        def get_blob_names_for_satisfaction(blob_name: str) -> List[str]:
             return get_blob_names_from_container(blob_name)
 
         @task(task_id="combine_blob_names")
-        def combine_blob_names(charge_blob_names: list[str], satisfaction_blob_names: list[str]) -> list[str]:
+        def combine_blob_names(charge_blob_names: List[str], satisfaction_blob_names: List[str]) -> List[str]:
             logging.info(f"Charge Blob Names: {charge_blob_names}")
             logging.info(f"Satisfaction Blob Names: {satisfaction_blob_names}")
             return charge_blob_names + satisfaction_blob_names
@@ -127,7 +128,7 @@ def finance_elt():
     )
 
     @task_group(group_id='phase_3_create_table_if_not_exists')
-    def phase_3_create_table_if_not_exists():
+    def phase_3_create_table_if_not_exists() -> None:
         create_charge_table = PostgresOperator(
             task_id=f"create_charge_table",
             postgres_conn_id=POSTGRES_CONN_ID,
@@ -152,7 +153,7 @@ def finance_elt():
         [create_charge_table, create_satisfaction_table, create_model_training_table]
 
     @task(task_id='save_data_from_storage_to_db')
-    def save_data_from_storage_to_db(blob_name: str) -> str:
+    def save_data_from_storage_to_db(blob_name: Optional[str]) -> Optional[str]:
         import requests
         import tempfile
         import os
@@ -163,7 +164,7 @@ def finance_elt():
         table_name: str = 'in_charge' if 'charge/' in blob_name else 'customer_satisfaction'
 
         # Download the file from the URL
-        url = f'https://{AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER_NAME}/{blob_name}'
+        url: str = f'https://{AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER_NAME}/{blob_name}'
         response = requests.get(url)
 
         if response.status_code == 200:
@@ -173,7 +174,7 @@ def finance_elt():
                 temp_file_path = temp_file.name
 
             # Now use the local file path for the copy_expert method
-            hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+            hook: PostgresHook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
             hook.copy_expert(
                 sql=f"COPY {table_name} FROM stdin WITH DELIMITER as ',' CSV HEADER",
                 filename=temp_file_path
@@ -188,8 +189,8 @@ def finance_elt():
 
 
     @task(task_id='move_blob_to_archive')
-    def move_blob_to_archive(source_blob_path: str):
-        hook = WasbHook(wasb_conn_id=AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW)
+    def move_blob_to_archive(source_blob_path: str) -> None:
+        hook: WasbHook = WasbHook(wasb_conn_id=AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW)
         blob_service_client = hook.blob_service_client
 
         source_blob = blob_service_client.get_blob_client(container=AZURE_CONTAINER_NAME, blob=source_blob_path)
@@ -252,7 +253,7 @@ def finance_elt():
     def finish():
         logging.warning(f'FINISHHHHHHHHHH ')
 
-    get_blob_names = phase_2_get_blob_names()
+    get_blob_names: List[str] = phase_2_get_blob_names()
     saved_blob_ready_to_move = save_data_from_storage_to_db.partial().expand(blob_name = get_blob_names)
     move_blob_to_archive = move_blob_to_archive.partial().expand(source_blob_path = saved_blob_ready_to_move)
 

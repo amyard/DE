@@ -6,15 +6,16 @@ import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression, RidgeCV, Lasso
 import numpy as np
+from typing import Dict, Any, Union
 
 from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 
-POSTGRES_CONN_ID = "delme-postgresql"
+POSTGRES_CONN_ID: str = "delme-postgresql"
 
 
-def feature_data_process(df: pd.DataFrame):
+def feature_data_process(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     from sklearn.model_selection import train_test_split
     from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
@@ -83,7 +84,7 @@ def feature_data_process(df: pd.DataFrame):
         "y_test_df": y_test_df,
     }
 
-def train_model(feature_data, model_class, hyper_parameters):
+def train_model(feature_data, model_class, hyper_parameters) -> Dict[str, Union[str, float, pd.DataFrame]]:
     from sklearn.metrics import r2_score
 
     print(f"Training model: {model_class.__name__}")
@@ -151,7 +152,7 @@ default_args = {
 )
 def finance_ml():
     @task
-    def fetch_data_from_db():
+    def fetch_data_from_db() -> pd.DataFrame:
         hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
         conn = hook.get_conn()
         query = "SELECT * FROM model_training;"
@@ -159,11 +160,11 @@ def finance_ml():
         return df
 
     @task(task_id='feature_data_task')
-    def feature_data_task(df: pd.DataFrame):
+    def feature_data_task(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         return feature_data_process(df)
 
     @task(task_id='train_model_task')
-    def train_model_task(feature_data, model_class, hyper_parameters={}):
+    def train_model_task(feature_data: Dict[str, pd.DataFrame], model_class: Any, hyper_parameters: Dict[str, Any] = {}) -> Dict[str, Any]:
         model_results = train_model(
             feature_data=feature_data,
             model_class=model_class,
@@ -194,7 +195,7 @@ def finance_ml():
     )
 
     @task
-    def plot_model_results(model_results):
+    def plot_model_results(model_results: Dict[str, Any]) -> None:
         import matplotlib.pyplot as plt
         import seaborn as sns
 

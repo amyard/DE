@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS {{ params.table_name }} (
-    id UUID PRIMARY KEY,
+    id UUID NOT NULL,
     amount INTEGER NOT NULL,
     amount_captured INTEGER NOT NULL,
     amount_refunded INTEGER NOT NULL,

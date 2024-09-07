@@ -11,6 +11,7 @@ from pendulum import datetime
 from dotenv import load_dotenv
 from pathlib import Path
 from azure.storage.blob import BlobServiceClient
+from  azure. storage. blob._models import PublicAccess
 from airflow.decorators import task, dag
 from airflow.providers.microsoft.azure.transfers.local_to_wasb import LocalFilesystemToWasbOperator
 from helpers.create_mock_data import generate_mock_data
@@ -80,7 +81,7 @@ def upload_finance_data_pipeline():
             try:
                 containers = blob_client.list_containers()
                 if AZURE_CONTAINER_NAME not in containers:
-                    blob_client.create_container(AZURE_CONTAINER_NAME)
+                    blob_client.create_container(AZURE_CONTAINER_NAME, public_access=PublicAccess.CONTAINER)
                     logging.info(f"Container '{AZURE_CONTAINER_NAME}' created'.")
                 return True
             except Exception as ex:
@@ -88,7 +89,7 @@ def upload_finance_data_pipeline():
                 return False
 
         blob_service_client = get_connection()
-        create_container(blob_service_client)
+        [create_container(blob_service_client), create_container('archive')]
 
         blob_service_client.close()
 

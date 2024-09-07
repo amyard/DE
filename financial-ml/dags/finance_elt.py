@@ -1,10 +1,9 @@
 import logging
 import os
 from pendulum import datetime
-from datetime import timedelta
+from datetime import timedelta, datetime
 from dotenv import load_dotenv
 from pathlib import Path
-from datetime import datetime
 
 from airflow.operators.empty import EmptyOperator
 from airflow.decorators import dag, task, task_group

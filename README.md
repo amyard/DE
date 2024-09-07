@@ -10,3 +10,4 @@ During implementation, we use various operators and hooks, including: BlobServic
 
 Link to DAGs: https://github.com/amyard/DE/tree/master/financial-ml
 
+![alt text](https://github.com/amyard/DE/blob/master/pipeline_finance.png?raw=true)

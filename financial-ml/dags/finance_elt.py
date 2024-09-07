@@ -1,11 +1,12 @@
 import logging
 import os
 
-from airflow.operators.empty import EmptyOperator
 from pendulum import datetime
 from datetime import timedelta
 from dotenv import load_dotenv
 from pathlib import Path
+from datetime import datetime
+from airflow.operators.empty import EmptyOperator
 from airflow.decorators import dag, task, task_group
 from airflow.providers.microsoft.azure.sensors.wasb import WasbPrefixSensor
 from airflow.providers.microsoft.azure.hooks.wasb import WasbHook
@@ -25,6 +26,7 @@ logging.basicConfig(filename=log_file, level=logging.INFO, filemode='w', format=
 
 
 AZURE_CONTAINER_NAME=os.environ.get('AZURE_CONTAINER_NAME')
+AZURE_CONTAINER_ARCHIVE=os.environ.get('AZURE_CONTAINER_ARCHIVE')
 AZURE_STORAGE_ACCOUNT_NAME=os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
 AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW='delme-storage-account'
 POKE_INTERVAL = 1 * 10
@@ -53,29 +55,29 @@ default_args = {
     tags=['financial-ml', 'elt', 'delme'],
 )
 def finance_elt():
-    # @task_group(group_id='phase_1_wait_for_blobs')
-    # def phase_1_wait_for_blobs():
-    #     wait_for_satisfaction=WasbPrefixSensor(
-    #         task_id="wait_for_blobs_charge",
-    #         wasb_conn_id=AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW,
-    #         container_name=AZURE_CONTAINER_NAME,
-    #         poke_interval=POKE_INTERVAL,
-    #         timeout=1 * 30,
-    #         mode='reschedule',
-    #         prefix='charge/'
-    #     )
-    #
-    #     wait_for_charge=WasbPrefixSensor(
-    #         task_id="wait_for_blobs_satisfaction",
-    #         wasb_conn_id=AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW,
-    #         container_name=AZURE_CONTAINER_NAME,
-    #         poke_interval=POKE_INTERVAL,
-    #         timeout=1 * 30,
-    #         mode='reschedule',
-    #         prefix='satisfaction/'
-    #     )
-    #
-    #     [wait_for_charge, wait_for_satisfaction]
+    @task_group(group_id='phase_1_wait_for_blobs')
+    def phase_1_wait_for_blobs():
+        wait_for_satisfaction=WasbPrefixSensor(
+            task_id="wait_for_blobs_charge",
+            wasb_conn_id=AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW,
+            container_name=AZURE_CONTAINER_NAME,
+            poke_interval=POKE_INTERVAL,
+            timeout=1 * 30,
+            mode='reschedule',
+            prefix='charge/'
+        )
+
+        wait_for_charge=WasbPrefixSensor(
+            task_id="wait_for_blobs_satisfaction",
+            wasb_conn_id=AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW,
+            container_name=AZURE_CONTAINER_NAME,
+            poke_interval=POKE_INTERVAL,
+            timeout=1 * 30,
+            mode='reschedule',
+            prefix='satisfaction/'
+        )
+
+        [wait_for_charge, wait_for_satisfaction]
 
     @task_group(group_id='phase_2_get_blob_names')
     def phase_2_get_blob_names():
@@ -108,8 +110,6 @@ def finance_elt():
         # Define task dependencies
         charge_blob_names = get_blob_names_for_charge('charge/')
         satisfaction_blob_names = get_blob_names_for_satisfaction('satisfaction/')
-
-        # Combine and return the results
         combined_blob_names = combine_blob_names(charge_blob_names, satisfaction_blob_names)
 
         return combined_blob_names
@@ -129,30 +129,30 @@ def finance_elt():
         task_id='start',
     )
 
-    # @task_group(group_id='phase_3_create_table_if_not_exists')
-    # def phase_3_create_table_if_not_exists():
-    #     create_charge_table = PostgresOperator(
-    #         task_id=f"create_charge_table",
-    #         postgres_conn_id=POSTGRES_CONN_ID,
-    #         sql="sql/in_charge.sql",
-    #         params={ 'table_name': 'in_charge' }
-    #     )
-    #
-    #     create_satisfaction_table = PostgresOperator(
-    #         task_id=f"create_satisfaction_table",
-    #         postgres_conn_id=POSTGRES_CONN_ID,
-    #         sql="sql/customer_satisfaction.sql",
-    #         params={'table_name': 'customer_satisfaction'}
-    #     )
-    #
-    #     create_model_training_table = PostgresOperator(
-    #         task_id=f"create_model_training_table",
-    #         postgres_conn_id=POSTGRES_CONN_ID,
-    #         sql="sql/model_training.sql",
-    #         params={'table_name': 'model_training'}
-    #     )
-    #
-    #     [create_charge_table, create_satisfaction_table, create_model_training_table]
+    @task_group(group_id='phase_3_create_table_if_not_exists')
+    def phase_3_create_table_if_not_exists():
+        create_charge_table = PostgresOperator(
+            task_id=f"create_charge_table",
+            postgres_conn_id=POSTGRES_CONN_ID,
+            sql="sql/in_charge.sql",
+            params={ 'table_name': 'in_charge' }
+        )
+
+        create_satisfaction_table = PostgresOperator(
+            task_id=f"create_satisfaction_table",
+            postgres_conn_id=POSTGRES_CONN_ID,
+            sql="sql/customer_satisfaction.sql",
+            params={'table_name': 'customer_satisfaction'}
+        )
+
+        create_model_training_table = PostgresOperator(
+            task_id=f"create_model_training_table",
+            postgres_conn_id=POSTGRES_CONN_ID,
+            sql="sql/model_training.sql",
+            params={'table_name': 'model_training'}
+        )
+
+        [create_charge_table, create_satisfaction_table, create_model_training_table]
 
     @task(task_id='save_data_from_storage_to_db')
     def save_data_from_storage_to_db(blob_name: str) -> str:
@@ -160,7 +160,6 @@ def finance_elt():
         import tempfile
         import os
 
-        logging.warning(f'----------------- BLOB NAME - {blob_name}')
         if blob_name is None:
             return None
 
@@ -185,8 +184,30 @@ def finance_elt():
 
             # Clean up the temporary file
             os.remove(temp_file_path)
+
+            return blob_name
         else:
             raise Exception(f"Failed to download file: {response.status_code} - {response.text}")
+
+
+    @task(task_id='move_blob_to_archive')
+    def move_blob_to_archive(source_blob_path: str):
+        hook = WasbHook(wasb_conn_id=AZURE_BLOB_STORAGE_CONN_FROM_AIRFLOW)
+        blob_service_client = hook.blob_service_client
+
+        source_blob = blob_service_client.get_blob_client(container=AZURE_CONTAINER_NAME, blob=source_blob_path)
+        dest_blob = blob_service_client.get_blob_client(container=AZURE_CONTAINER_ARCHIVE, blob=f'financial_data/date_{datetime.now().strftime("%Y-%m-%d")}/{source_blob_path}')
+
+        dest_blob.start_copy_from_url(source_blob.url, requires_sync=True)
+        copy_properties = dest_blob.get_blob_properties().copy
+
+        if copy_properties.status != "success":
+            dest_blob.abort_copy(copy_properties.id)
+            raise Exception(
+                f"Unable to copy blob %s with status %s" % (source_blob_path, copy_properties.status)
+            )
+        source_blob.delete_blob()
+        logging.info(f'Blob "{source_blob_path}" deleted.')
 
 
     @task(task_id="finish")
@@ -194,20 +215,12 @@ def finance_elt():
         # get from xcom
         logging.warning(f'FINISHHHHHHHHHH ')
 
-
-
+    # TODO ---> THIS WORK !!!
     blob_names = phase_2_get_blob_names()
     saved = save_data_from_storage_to_db.partial().expand(blob_name = blob_names)
+    move_blob_to_archive = move_blob_to_archive.partial().expand(source_blob_path = saved)
 
-    start >> blob_names >> saved >> finish()
-
-    # launch_job.partial(batch_job_id=get_job_id()).expand(batch_run_id=get_run_ids())
-    # save_data = save_data_from_storage_to_db.partial(table_name='customer_satisfaction').expand(blob_name = get_current_context()['ti'].xcom_pull(task_ids='phase_2_get_blob_names.get_blob_names_for_satisfaction'))
-
-
-    # start >> phase_1_wait_for_blobs() >> phase_2_get_blob_names() >> phase_3_create_table_if_not_exists()  >> finish()
-    # start >> phase_2_get_blob_names() >> save_data() >> finish()
-
+    start >> phase_1_wait_for_blobs() >> blob_names >> phase_3_create_table_if_not_exists() >> saved >> move_blob_to_archive >> finish()
 
 
 # TRU THIS  https://sihan.hashnode.dev/how-to-use-postreshook-in-airflow

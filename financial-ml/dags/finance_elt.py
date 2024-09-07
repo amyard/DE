@@ -1,20 +1,18 @@
 import logging
 import os
-
 from pendulum import datetime
 from datetime import timedelta
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import datetime
+
 from airflow.operators.empty import EmptyOperator
 from airflow.decorators import dag, task, task_group
 from airflow.providers.microsoft.azure.sensors.wasb import WasbPrefixSensor
 from airflow.providers.microsoft.azure.hooks.wasb import WasbHook
-from airflow.operators.python import PythonOperator, get_current_context
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.utils.db import provide_session
-from airflow import DAG
 from airflow.models import XCom
 
 
@@ -209,22 +207,56 @@ def finance_elt():
         source_blob.delete_blob()
         logging.info(f'Blob "{source_blob_path}" deleted.')
 
+    store_calculated_data_for_ml_training = PostgresOperator(
+        task_id='store_calculated_data_for_ml_training',
+        postgres_conn_id=POSTGRES_CONN_ID,
+        sql="""
+            WITH cte AS (
+                SELECT
+                    customer_id,
+                    ROUND(AVG(amount_captured), 2) AS avg_amount_captured
+                FROM in_charge
+                WHERE status = 'succeeded' 
+                    AND outcome_network_status = 'approved_by_network' 
+                    AND paid = true
+                GROUP BY customer_id
+            )
+            
+            INSERT INTO model_training (
+                customer_id, 
+                customer_satisfaction_speed, 
+                customer_satisfaction_product, 
+                customer_satisfaction_service, 
+                product_type, 
+                avg_amount_captured
+            )
+            SELECT DISTINCT
+                s.customer_id,
+                s.customer_satisfaction_speed,
+                s.customer_satisfaction_product,
+                s.customer_satisfaction_service,
+                s.product_type,
+                c.avg_amount_captured
+            FROM cte c 
+            INNER JOIN customer_satisfaction s ON s.customer_id = c.customer_id
+            ON CONFLICT (customer_id)
+            DO UPDATE SET
+                customer_satisfaction_speed = EXCLUDED.customer_satisfaction_speed,
+                customer_satisfaction_product = EXCLUDED.customer_satisfaction_product,
+                customer_satisfaction_service = EXCLUDED.customer_satisfaction_service,
+                product_type = EXCLUDED.product_type,
+                avg_amount_captured = EXCLUDED.avg_amount_captured;
+        """
+    )
 
     @task(task_id="finish")
     def finish():
-        # get from xcom
         logging.warning(f'FINISHHHHHHHHHH ')
 
-    # TODO ---> THIS WORK !!!
-    blob_names = phase_2_get_blob_names()
-    saved = save_data_from_storage_to_db.partial().expand(blob_name = blob_names)
-    move_blob_to_archive = move_blob_to_archive.partial().expand(source_blob_path = saved)
+    get_blob_names = phase_2_get_blob_names()
+    saved_blob_ready_to_move = save_data_from_storage_to_db.partial().expand(blob_name = get_blob_names)
+    move_blob_to_archive = move_blob_to_archive.partial().expand(source_blob_path = saved_blob_ready_to_move)
 
-    start >> phase_1_wait_for_blobs() >> blob_names >> phase_3_create_table_if_not_exists() >> saved >> move_blob_to_archive >> finish()
+    start >> phase_1_wait_for_blobs() >> get_blob_names >> phase_3_create_table_if_not_exists() >> saved_blob_ready_to_move >> move_blob_to_archive >> store_calculated_data_for_ml_training >> finish()
 
-
-# TRU THIS  https://sihan.hashnode.dev/how-to-use-postreshook-in-airflow
-# PostgresHook and copy_expert -  https://github.com/apache/airflow/blob/main/airflow/providers/postgres/hooks/postgres.py#L117
-# sql for hook - https://www.projectpro.io/recipes/extract-data-from-postgres-and-store-it-into-csv-file-by-executing-python-task-airflow-dag
-# Apache Airflow & PostgreSQL -  https://medium.com/@sriskandaryan/apache-airflow-postgresql-5f416f841da4
 finance_elt()

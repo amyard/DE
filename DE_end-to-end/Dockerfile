@@ -15,3 +15,9 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 RUN pip install -U scikit-learn
 COPY requirements.txt .
 RUN python -m pip install -U pip setuptools && pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+
+# Copy connection.json file into the container
+COPY scripts/connection.json /opt/airflow/scripts/connection.json
+
+# Import connections into Airflow
+RUN airflow connections import /opt/airflow/scripts/connection.json

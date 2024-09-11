@@ -81,6 +81,7 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
     - ${AIRFLOW_PROJ_DIR:-.}/jobs:/opt/airflow/jobs
+    - ${AIRFLOW_PROJ_DIR:-.}/scripts:/opt/airflow/scripts
     - ${AIRFLOW_PROJ_DIR:-.}/.env:/opt/airflow/.env
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
@@ -271,8 +272,8 @@ services:
           echo "   https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html#before-you-begin"
           echo
         fi
-        mkdir -p /sources/logs /sources/dags /sources/plugins /sources/jobs
-        chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins,jobs}
+        mkdir -p /sources/logs /sources/dags /sources/plugins /sources/jobs /source/scripts
+        chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins,jobs,scripts}
         exec /entrypoint airflow version
     # yamllint enable rule:line-length
     environment:

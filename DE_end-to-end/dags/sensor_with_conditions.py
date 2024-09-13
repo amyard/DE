@@ -79,10 +79,6 @@ def sensor_with_conditions():
         {'prefix': 'some_blob', 'container_name': AZURE_CONTAINER_NANE},
     ])
 
-    def get_sql_query(table_name: str) -> str:
-        # Use double quotes to escape the table name
-        return f"SELECT EXISTS (SELECT 1 FROM {table_name});"
-
     postgres_conn_1 = SqlSensor(
         task_id="postgres_conn_1",
         conn_id=POSTGRES_CONN_ID,

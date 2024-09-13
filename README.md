@@ -10,8 +10,7 @@ During implementation, we use various operators and hooks, including: BlobServic
 
 Link to DAGs: https://github.com/amyard/DE/blob/master/DE_end-to-end/dags/finance_elt.py
 
-![alt text](https://github.com/amyard/DE/blob/master/pipeline_finance.png?raw=true)
-
+![pipeline_finance.png](images%2Fpipeline_finance.png)
 
 ## Optimizing Sensor and Trigger Rule Usage: A Practical Guide
 Check out our latest example demonstrating the effective use of SqlSensor and WasbPrefixSensor in Airflow. Dive into the details and see how to implement these sensors with trigger rules in your DAGs.
@@ -19,6 +18,13 @@ Check out our latest example demonstrating the effective use of SqlSensor and Wa
 Explore the DAGs here: https://github.com/amyard/DE/blob/master/DE_end-to-end/dags/sensor_with_conditions.py
 
 ![SensorAndTriggerRules.png](images%2FSensorAndTriggerRules.png)
+
+
+# DagDependency and BranchOperator
+Explore the DAGs here: https://github.com/amyard/DE/blob/master/DE_end-to-end/dags/dag_dependency.py
+![DagDependency1.png](images%2FDagDependency1.png)
+![DagDependency2.png](images%2FDagDependency2.png)
+
 
 
 

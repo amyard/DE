@@ -1,8 +1,11 @@
+import random
 from pendulum import datetime
-from airflow.decorators import dag, task
+from airflow.decorators import dag, task, task_group
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.bash import BashOperator
+from tornado.process import task_id
+
 
 @dag(
     start_date=datetime(2024, 9,13),
@@ -13,6 +16,7 @@ from airflow.operators.bash import BashOperator
 def parent_dag():
     start = EmptyOperator(task_id='start')
     finish = EmptyOperator(task_id='finish')
+
     trigger_A = TriggerDagRunOperator(
         task_id="trigger_A",
         trigger_dag_id="slave_dag_1",
@@ -23,7 +27,20 @@ def parent_dag():
         trigger_dag_id="slave_dag_2",
     )
 
-    start >> [trigger_A, trigger_B] >> finish
+    @task()
+    def random_generator() -> int:
+        return random.randint(0, 9)
+
+    @task.branch(task_id='make_decission')
+    def make_decision(number: int) -> list[str]:
+        redirect: str = 'trigger_A' if number  % 2 == 0 else 'trigger_B'
+        return [redirect]
+
+
+    number = random_generator()
+    decision = make_decision(number)
+    start >> number >> decision >> [trigger_A, trigger_B] >> finish
+
 parent_dag()
 
 

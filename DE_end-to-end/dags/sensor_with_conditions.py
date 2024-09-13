@@ -7,7 +7,9 @@ from airflow.decorators import dag, task
 from airflow.operators.empty import EmptyOperator
 from airflow.providers.microsoft.azure.sensors.wasb import WasbPrefixSensor
 from airflow.exceptions import AirflowSensorTimeout
-
+from airflow.utils.trigger_rule import TriggerRule
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+from airflow.providers.common.sql.sensors.sql import SqlSensor
 
 dotenv_path = Path(__file__).resolve().parent.parent / '.env'
 load_dotenv(dotenv_path)
@@ -43,44 +45,23 @@ def sensor_with_conditions():
     start = EmptyOperator(task_id='start')
     finish = EmptyOperator(task_id='finish')
 
-    blob_sensor_1 = WasbPrefixSensor(
-        task_id="blob_sensor_1",
-        wasb_conn_id=AZURE_BLOB_STORAGE_CONN,
-        container_name='finance-data',
-        poke_interval=POKE_INTERVAL,
-        timeout=TIMEOUT_INTERVAL,
-        mode='reschedule',
-        deferrable=True,
-        prefix='sensor',
-        on_failure_callback=_failure_callback,
-        soft_fail=True
-    )
+    def blob_connection(task_id: str, container_name: str, prefix: str) -> WasbPrefixSensor:
+        return WasbPrefixSensor(
+            task_id=task_id,
+            wasb_conn_id=AZURE_BLOB_STORAGE_CONN,
+            container_name=container_name,
+            poke_interval=POKE_INTERVAL,
+            timeout=TIMEOUT_INTERVAL,
+            mode='reschedule',
+            deferrable=True,
+            prefix=prefix,
+            on_failure_callback=_failure_callback,
+            soft_fail=True
+        )
 
-    blob_sensor_2 = WasbPrefixSensor(
-        task_id="blob_sensor_2",
-        wasb_conn_id=AZURE_BLOB_STORAGE_CONN,
-        container_name='finance-data',
-        poke_interval=POKE_INTERVAL,
-        timeout=TIMEOUT_INTERVAL,
-        mode='reschedule',
-        deferrable=True,
-        prefix='notexistblob',
-        on_failure_callback=_failure_callback,
-        soft_fail=True
-    )
-
-    blob_sensor_3 = WasbPrefixSensor(
-        task_id="blob_sensor_3",
-        wasb_conn_id=AZURE_BLOB_STORAGE_CONN,
-        container_name='finance-data',
-        poke_interval=POKE_INTERVAL,
-        timeout=TIMEOUT_INTERVAL,
-        mode='reschedule',
-        deferrable=True,
-        prefix='some_blob',
-        on_failure_callback=_failure_callback,
-        soft_fail=True
-    )
+    blob_sensor_1 = blob_connection("blob_sensor_1", AZURE_CONTAINER_NANE, 'sensor')
+    blob_sensor_2 = blob_connection("blob_sensor_2", AZURE_CONTAINER_NANE, 'notexistblob')
+    blob_sensor_3 = blob_connection("blob_sensor_3", AZURE_CONTAINER_NANE, 'some_blob')
 
     blob_sensor_4 = WasbPrefixSensor.partial(
         task_id="blob_sensor_4",
@@ -98,11 +79,54 @@ def sensor_with_conditions():
         {'prefix': 'some_blob', 'container_name': AZURE_CONTAINER_NANE},
     ])
 
+    def get_sql_query(table_name: str) -> str:
+        # Use double quotes to escape the table name
+        return f"SELECT EXISTS (SELECT 1 FROM {table_name});"
+
+    postgres_conn_1 = SqlSensor(
+        task_id="postgres_conn_1",
+        conn_id=POSTGRES_CONN_ID,
+        sql="""SELECT EXISTS (
+                    SELECT 1 
+                    FROM {{ params.table_name }} 
+                    WHERE DATE(created) = '{{ ds }}'
+                );""",
+        poke_interval=POKE_INTERVAL,
+        timeout=TIMEOUT_INTERVAL,
+        mode='reschedule',
+        on_failure_callback=_failure_callback,
+        soft_fail=True,
+        params={"table_name": "magic"}
+    )
+
+    postgres_conn_2 = SqlSensor(
+        task_id="postgres_conn_2",
+        conn_id=POSTGRES_CONN_ID,
+        sql="""SELECT EXISTS (
+                    SELECT 1 
+                    FROM {{ params.table_name }} 
+                    WHERE DATE(created) = '{{ ds }}'
+                );""",
+        poke_interval=POKE_INTERVAL,
+        timeout=TIMEOUT_INTERVAL,
+        mode='reschedule',
+        on_failure_callback=_failure_callback,
+        soft_fail=True,
+        params={"table_name": "technology"}
+    )
+
+    @task(task_id='all_success', trigger_rule=TriggerRule.ALL_SUCCESS)
+    def all_success():
+        logging.info("Done method - trigger_rule='none_failed_min_one_success'.")
+
     @task(trigger_rule='none_failed_min_one_success')
     def done():
         logging.info("Done method - trigger_rule='none_failed_min_one_success'.")
 
-    start >> [blob_sensor_1, blob_sensor_2, blob_sensor_3] >> blob_sensor_4 >> done() >> finish
+    start >> [blob_sensor_1, blob_sensor_2, blob_sensor_3, postgres_conn_1, postgres_conn_2]
+    [blob_sensor_1, blob_sensor_2, blob_sensor_3] >> blob_sensor_4 >> done() >> finish
+    [postgres_conn_1, postgres_conn_2] >> all_success()
+
 
 
 sensor_with_conditions()

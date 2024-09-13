@@ -8,6 +8,18 @@ Detect new data, download it to PostgreSQL, clean it, and prepare it for machine
 Extract features, train models, and plot the model results.
 During implementation, we use various operators and hooks, including: BlobServiceClient, WasbHook, WasbPrefixSensor, LocalFilesystemToWasbOperator, PostgresOperator, and PostgresHook.
 
-Link to DAGs: https://github.com/amyard/DE/tree/master/financial-ml
+Link to DAGs: https://github.com/amyard/DE/blob/master/DE_end-to-end/dags/finance_elt.py
 
 ![alt text](https://github.com/amyard/DE/blob/master/pipeline_finance.png?raw=true)
+
+
+## Optimizing Sensor and Trigger Rule Usage: A Practical Guide
+Check out our latest example demonstrating the effective use of SqlSensor and WasbPrefixSensor in Airflow. Dive into the details and see how to implement these sensors with trigger rules in your DAGs.
+
+Explore the DAGs here: https://github.com/amyard/DE/blob/master/DE_end-to-end/dags/sensor_with_conditions.py
+
+![SensorAndTriggerRules.png](images%2FSensorAndTriggerRules.png)
+
+
+
+`airflow connections export connections.json` - export from airflow to local

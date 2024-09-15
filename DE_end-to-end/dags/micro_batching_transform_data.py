@@ -1,4 +1,5 @@
 import os
+import time
 
 from airflow.utils.trigger_rule import TriggerRule
 from pendulum import datetime
@@ -7,9 +8,10 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 from airflow.hooks.base import BaseHook
-from airflow.decorators import dag, task
+from airflow.decorators import dag
 from airflow.operators.empty import EmptyOperator
-
+from airflow.sensors.time_delta import TimeDeltaSensor
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
 dotenv_path = Path(__file__).resolve().parent.parent / '.env'
 load_dotenv(dotenv_path)
@@ -61,41 +63,13 @@ default_args = {
     start_date=datetime(2024, 9, 13),
     schedule='@daily',
     catchup=False,
-    tags=['micro-batching', 'pyspark', 'delme']
+    tags=['micro-batching', 'transform-data', 'delme']
 )
-def micro_batching_load_data():
-    from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-
+def micro_batching_transform_data():
     start = EmptyOperator(task_id='start')
-    finish = EmptyOperator(
-        task_id='finish',
-        trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED
-    )
+    finish = EmptyOperator(task_id='finish')
 
-    # Define application arguments
-    application_args = [
-        "--KAFKA_BOOTSTRAP_SERVER", KAFKA_BOOTSTRAP_SERVER,
-        "--KAFKA_TOPIC", KAFKA_TOPIC,
-        # Section Azure
-        "--AZURE_CONTAINER_NAME", AZURE_CONTAINER_NAME,
-        "--AZURE_STORAGE_ACCOUNT_NAME", AZURE_STORAGE_ACCOUNT_NAME,
-        "--AZURE_STORAGE_ACCOUNT_KEY", AZURE_STORAGE_ACCOUNT_KEY,
-        # Section Postgres
-        "--POSTGRES_TABLE", POSTGRES_TABLE,
-        "--POSTGRES_LOGIN", POSTGRES_LOGIN,
-        "--POSTGRES_PASSWORD", POSTGRES_PASSWORD,
-        "--POSTGRES_HOST", POSTGRES_HOST,
-        "--POSTGRES_PORT", POSTGRES_PORT,
-        "--POSTGRES_DBNAME", POSTGRES_DBNAME,
-    ]
+    start >> finish
 
-    trigger_pyspark_job = SparkSubmitOperator(
-        task_id="trigger_pyspark_job",
-        conn_id="delme-pyspark",
-        application="jobs/micro_batching_load_job.py",
-        packages="org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.2,org.postgresql:postgresql:42.7.3,org.apache.hadoop:hadoop-azure:3.4.0,com.azure:azure-storage-blob:12.27.1",
-        application_args=application_args
-    )
-    start >> trigger_pyspark_job >> finish
 
-micro_batching_load_data()
+micro_batching_transform_data()

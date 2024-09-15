@@ -98,10 +98,7 @@ def micro_batching_load_data():
 
     wait_for_one_minute = TimeDeltaSensor(
         task_id="wait_for_one_minute",
-        # sleep_duration=timedelta(seconds=20),
         mode='reschedule',
-        # delta=pendulum.duration(seconds=20)
-        # delta=timedelta(minutes=1)
         delta=timedelta(seconds=30)
     )
 

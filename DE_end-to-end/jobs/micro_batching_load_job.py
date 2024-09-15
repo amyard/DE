@@ -165,6 +165,14 @@ def main():
              .outputMode("append")
              .start())
 
+    # query = streamed_df \
+    #         .writeStream \
+    #         .trigger(processingTime='1 seconds') \
+    #         .outputMode("update") \
+    #         .option("truncate", "false")\
+    #         .format("console") \
+    #         .start()
+
     query.awaitTermination()
     spark.stop()
 

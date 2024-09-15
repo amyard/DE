@@ -84,7 +84,7 @@ def create_mock_data():
         'gender': gender,
         'ad_position': ad_position,
         'browsing_history': browsing_history,
-        'activity_time': activity_time.strftime("%m/%d/%Y %H:%M:%S"),
+        'activity_time': activity_time.strftime("%Y-%m-%d %H:%M:%S"),
         'ip_address': ip_address,
         'log': log,
         'redirect_from': redirect_from,

@@ -120,16 +120,17 @@ def write_to_blob(batch_df: DataFrame, batch_id: int, file_format: str, azure_bl
     """Write DataFrame to Azure Blob Storage in the specified format."""
 
     logging.info(f"Writing batch {batch_id} to Azure Blob as {file_format.upper()}")
-    output_path = f"{storage_url}/{azure_blob_path}/batch_{batch_id}.{file_format.lower()}"
 
     if file_format == "json":
         json_data = batch_df.toJSON().collect()
         blob_service_client = BlobServiceClient(account_url=f"https://{azure_storage_account_name}.blob.core.windows.net",
                                                 credential=azure_storage_account_key)
-        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=output_path)
+        blob_client = blob_service_client.get_blob_client(container=azure_container_name,
+                                                          blob=f"{azure_blob_path}/batch_{batch_id}.{file_format.lower()}")
         blob_client.upload_blob("\n".join(json_data), overwrite=True)
     else:
         _options = {"header": "true", "inferSchema": "true", "delimiter": "|"} if file_format == "csv" else {}
+        output_path = f"{storage_url}/{azure_blob_path}/batch_{batch_id}.{file_format.lower()}"
         batch_df.coalesce(1).write.options(**_options).mode("append").format(file_format).save(output_path)
 
 

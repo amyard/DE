@@ -4,7 +4,6 @@ from airflow.decorators import dag, task, task_group
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.bash import BashOperator
-from tornado.process import task_id
 
 
 @dag(

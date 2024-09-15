@@ -28,4 +28,5 @@ Explore the DAGs here: https://github.com/amyard/DE/blob/master/DE_end-to-end/da
 
 
 
-`airflow connections export connections.json` - export from airflow to local
+`airflow connections export connection.json` - export from airflow to local
+`airflow connections import scripts/connection.json` - import to airflow to local

@@ -329,20 +329,30 @@ services:
     container_name: spark-master
     command: bin/spark-class org.apache.spark.deploy.master.Master
     ports:
-      - "9090:8081"
+      - "9090:8080"
       - "7077:7077"
 
-  spark-worker:
+  spark-worker-1:
     <<: *spark-common
-    container_name: spark-worker
+    container_name: spark-worker-1
     command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     depends_on:
       - spark-master
     environment:
       SPARK_MODE: worker
       SPARK_WORKER_CORES: 2
-      SPARK_WORKER_MEMORY: 1g
-      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_MEMORY: 2g
+
+  spark-worker-2:
+    <<: *spark-common
+    container_name: spark-worker-2
+    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    depends_on:
+      - spark-master
+    environment:
+      SPARK_MODE: worker
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2g
   # SPARK SERVICES END
 
   # KAFKA SERVICES START

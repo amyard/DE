@@ -103,7 +103,7 @@ def start_spark_session() -> SparkSession:
 
 def load_data(spark: SparkSession):
     """Load data from PostgreSQL into a DataFrame."""
-    query = f"(SELECT * FROM logs WHERE status = 'uploaded' AND DATE(created_at) = '{datetime.now().timedelta(days = 1).strftime('%Y-%m-%d')}') AS temp_table"
+    query = f"(SELECT * FROM logs WHERE status = 'uploaded' AND DATE(created_at) = '{datetime.now().strftime('%Y-%m-%d')}') AS temp_table"
     # query = f"(SELECT * FROM logs WHERE DATE(created_at) = '{(datetime.now() - timedelta(days = 1)).strftime('%Y-%m-%d')}') AS temp_table"
 
     return (spark.read

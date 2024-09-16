@@ -25,21 +25,21 @@ KAFKA_BOOTSTRAP_SERVER: str = os.environ.get("MICRO_BATCHING_KAFKA_BOOTSTRAP_SER
 KAFKA_TOPIC: str = os.environ.get("MICRO_BATCHING_KAFKA_TOPIC")
 
 
-def convert_to_tz(time_z):
-    desired_timezone = pytz.timezone("UTC")
-    utc_datetime = datetime.combine(datetime.now(tz=pytz.timezone("UTC")).date(), time_z)
-    localized_datetime = pytz.utc.localize(utc_datetime)
-    converted_datetime = localized_datetime.astimezone(desired_timezone)
+def convert_to_tz(time_z) -> datetime:
+    desired_timezone: pytz.UTC = pytz.timezone("UTC")
+    utc_datetime: datetime = datetime.combine(datetime.now(tz=pytz.timezone("UTC")).date(), time_z)
+    localized_datetime: datetime = pytz.utc.localize(utc_datetime)
+    converted_datetime: datetime = localized_datetime.astimezone(desired_timezone)
 
     return converted_datetime
 
 @provide_session
-def check_if_task_already_run(dag_id, task_id, session=None) -> bool:
+def check_if_task_already_run(dag_id: str, task_id: str, session=None) -> bool:
     # FIX ERROR: sqlalchemy.exc.StatementError: (builtins.ValueError) naive datetime is disallowed
-    start_of_today = convert_to_tz(time.min)
-    end_of_today = convert_to_tz(time.max)
+    start_of_today: datetime = convert_to_tz(time.min)
+    end_of_today: datetime = convert_to_tz(time.max)
 
-    task_instance = session.query(TaskInstance).filter(
+    task_instance: TaskInstance = session.query(TaskInstance).filter(
         TaskInstance.dag_id == dag_id,
         TaskInstance.task_id == task_id,
         TaskInstance.start_date >= start_of_today,

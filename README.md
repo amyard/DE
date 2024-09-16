@@ -34,5 +34,13 @@ Check out the DAG here: https://github.com/amyard/DE/blob/master/DE_end-to-end/d
 ![pyspark2.png](images%2Fpyspark2.png)
 
 
+# Trigger a Task Once Per Day, Even with Frequent DAG Runs
+To ensure a task runs only once per day, even if your DAG executes every 5 minutes, implement a helper function to verify if the task was successfully executed today. Add a branch task in your DAG to check the result of this function and conditionally execute the correct task based on the outcome.
+Pro Tip: Be cautious with SQLAlchemy when using datetime conditions, as timezone issues can lead to exceptions.
+Check out the DAG here: https://github.com/amyard/DE/blob/master/DE_end-to-end/dags/micro_batching_generate_data.py
+![TriggerOnce1.png](images%2FTriggerOnce1.png)
+![TriggerOnce3.png](images%2FTriggerOnce3.png)
+![TriggerOnce2.png](images%2FTriggerOnce2.png)
+
 `airflow connections export connection.json` - export from airflow to local
 `airflow connections import scripts/connection.json` - import to airflow to local

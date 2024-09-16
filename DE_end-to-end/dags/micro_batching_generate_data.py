@@ -61,7 +61,7 @@ default_args = {
 @dag(
     start_date=datetime(2024, 9, 14),
     catchup=False,
-    schedule_interval=timedelta(minutes=1),
+    schedule_interval=timedelta(seconds=20),
     # schedule_interval=timedelta(seconds=10),
     tags=['micro-batching', 'generate-data', 'delme']
 )

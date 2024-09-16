@@ -1,6 +1,7 @@
 ## Financial ML
 DAG for Generating Finance Data, Preprocessing, and Using ML Techniques for Prediction
 
+
 This DAG performs three main steps:
 
 Generate data and store it in an Azure Storage Account.
@@ -25,7 +26,12 @@ Explore the DAGs here: https://github.com/amyard/DE/blob/master/DE_end-to-end/da
 ![DagDependency1.png](images%2FDagDependency1.png)
 ![DagDependency2.png](images%2FDagDependency2.png)
 
-
+# Using SparkSubmitOperator with Additional JAR Packages and Parameters
+We're running a PySpark job enhanced with JAR packages for Azure and PostgreSQL integrations, while securely handling sensitive data.
+Pro Tip: Make sure to allocate sufficient resources for the Spark master and worker in your Docker file, or you'll encounter errors related to insufficient resources for the worker.
+Check out the DAG here: https://github.com/amyard/DE/blob/master/DE_end-to-end/dags/micro_batching_load_data.py
+![pyspark.png](images%2Fpyspark.png)
+![pyspark2.png](images%2Fpyspark2.png)
 
 
 `airflow connections export connection.json` - export from airflow to local

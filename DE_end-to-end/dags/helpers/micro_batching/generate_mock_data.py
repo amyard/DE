@@ -60,7 +60,7 @@ def create_mock_data():
     ad_position = random.choice(['top-banner', 'sidebar', 'inline', 'footer', 'popup'])
 
     # Browsing history categories (20 categories)
-    browsing_history = random.sample(categories, random.randint(1, 5))  # Randomly pick 1-5 categories
+    browsing_history = random.choice(categories)
 
     # Date and time of activity
     activity_time = fake.date_time_this_year()

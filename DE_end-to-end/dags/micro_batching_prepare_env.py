@@ -123,12 +123,19 @@ def micro_batching_prepare_env():
         params={'table_name': POSTGRES_TABLE}
     )
 
+    create_logs_transformed_tables = PostgresOperator(
+        task_id=f"create_logs_transformed_tables",
+        postgres_conn_id=POSTGRES_CONN_ID,
+        sql="sql/micro_batching_transformed.sql",
+        params={'table_name_transformed': 'logs_transformed'}
+    )
+
     trigger_generate_data = TriggerDagRunOperator(
         task_id="trigger_generate_data",
         trigger_dag_id="micro_batching_generate_data",
         conf={"message": "Message to pass to Generate Data Dag."},
     )
 
-    start >> [prepare_azure_env(), create_logs_table] >> trigger_generate_data
+    start >> [prepare_azure_env(), create_logs_table, create_logs_transformed_tables] >> trigger_generate_data
 
 micro_batching_prepare_env()

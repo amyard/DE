@@ -13,7 +13,9 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 # Install Python dependencies
 # For fixing problem with installing package we will intall it separately
 RUN pip install -U scikit-learn
+
 COPY requirements.txt .
+COPY pyspark_requirements.txt .
 RUN python -m pip install -U pip setuptools && pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 # Copy connection.json file into the container

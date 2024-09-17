@@ -62,7 +62,7 @@ default_args = {
 
 
 @dag(
-    start_date=datetime(2024, 9, 13),
+    start_date=datetime(2024, 9, 17),
     schedule='@daily',
     catchup=False,
     tags=['micro-batching', 'load-data', 'delme']

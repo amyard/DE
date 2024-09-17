@@ -20,9 +20,6 @@ logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format='%(asctime)s -
 
 # Argument parser
 parser = argparse.ArgumentParser()
-parser.add_argument('--AZURE_CONTAINER_NAME', required=True)
-parser.add_argument('--AZURE_STORAGE_ACCOUNT_NAME', required=True)
-parser.add_argument('--AZURE_STORAGE_ACCOUNT_KEY', required=True)
 parser.add_argument('--POSTGRES_TABLE', required=True)
 parser.add_argument('--POSTGRES_LOGIN', required=True)
 parser.add_argument('--POSTGRES_PASSWORD', required=True)
@@ -31,13 +28,6 @@ parser.add_argument('--POSTGRES_PORT', required=True)
 parser.add_argument('--POSTGRES_DBNAME', required=True)
 
 args = parser.parse_args()
-
-# Azure Blob Storage parameters
-azure_container_name = args.AZURE_CONTAINER_NAME
-azure_storage_account_name = args.AZURE_STORAGE_ACCOUNT_NAME
-azure_storage_account_key = args.AZURE_STORAGE_ACCOUNT_KEY
-storage_url = f"wasbs://{azure_container_name}@{azure_storage_account_name}.blob.core.windows.net"
-azure_blob_path = f"input_{datetime.now().strftime('%Y-%m-%d')}"
 
 # PostgreSQL parameters
 postgres_params = {

@@ -57,7 +57,7 @@ default_args = {
 
 
 @dag(
-    start_date=datetime(2024, 9, 16),
+    start_date=datetime(2024, 9, 17),
     schedule='@daily',
     catchup=False,
     tags=['micro-batching', 'load-data', 'delme']
@@ -69,10 +69,6 @@ def micro_batching_transform_data():
 
     # Define application arguments
     application_args = [
-        # Section Azure
-        "--AZURE_CONTAINER_NAME", AZURE_CONTAINER_NAME,
-        "--AZURE_STORAGE_ACCOUNT_NAME", AZURE_STORAGE_ACCOUNT_NAME,
-        "--AZURE_STORAGE_ACCOUNT_KEY", AZURE_STORAGE_ACCOUNT_KEY,
         # Section Postgres
         "--POSTGRES_TABLE", POSTGRES_TABLE,
         "--POSTGRES_LOGIN", POSTGRES_LOGIN,
@@ -90,7 +86,15 @@ def micro_batching_transform_data():
         application_args=application_args
     )
 
-    start >> micro_batching_prepare_data_for_transform_job >> finish
+    micro_batching_transformation_job = SparkSubmitOperator(
+        task_id="micro_batching_transformation_job",
+        conn_id="delme-pyspark",
+        application="jobs/micro_batching_transformation_job.py",
+        packages="org.postgresql:postgresql:42.7.3",
+        application_args=application_args
+    )
+
+    start >> micro_batching_prepare_data_for_transform_job >> micro_batching_transformation_job >> finish
 
 
 micro_batching_transform_data()

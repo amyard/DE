@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-if [ -e "/opt/airflow/requirements.txt" ]; then
+if [ -e "/opt/airflow/requirements/requirements.txt" ]; then
   $(command python) pip install --upgrade pip
   $(command -v pip) install -r requirements.txt
 fi

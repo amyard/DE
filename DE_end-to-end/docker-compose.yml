@@ -36,17 +36,18 @@ x-airflow-common:
     postgres:
       condition: service_healthy
   deploy:
-      resources:
-        limits:
-          cpus: "4.0"
-          memory: 6000M
+    resources:
+      limits:
+        cpus: "4.0"
+        memory: 6000M
   networks:
     - confluent
 
 x-spark-common:
   &spark-common
-  image: bitnami/spark:3.5.2
-  entrypoint: [ '/opt/airflow/script/pyspark_entrypoint.sh' ]
+  build:
+    context: .
+    dockerfile: Dockerfile.spark
   volumes:
     - ./jobs:/opt/bitnami/spark/jobs
   networks:

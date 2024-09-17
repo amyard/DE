@@ -151,10 +151,11 @@ def save_data_into_transformed_table(df):
 
 def update_status_in_logs_table(ids):
     """Update the status of processed records in PostgreSQL."""
-    batch_size = 10
+    batch_size = 100
     ids_batches = [ids[i:i + batch_size] for i in range(0, len(ids), batch_size)]
 
-    for batch in ids_batches:
+    for batch_id, batch in enumerate(ids_batches):
+        print(f'------- BATCH ID FOR INSERTING  {batch_id}')
         ids_str = ','.join([f"'{id}'" for id in batch])
         update_query = f"""
                 UPDATE logs
@@ -185,6 +186,7 @@ def main():
     df = load_data(spark).cache()
     ids = [row['id'] for row in df.select(col('id')).collect()]
     df = transform_data(df)
+    print(f'---------  AMOUT OF DATA   {df.count()}')
 
     # Save transformed data
     logging.info('Starting to save transformed data...')

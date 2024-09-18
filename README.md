@@ -1,3 +1,13 @@
+## Micro-Batching: End-to-End Project (Airflow, Kafka, PySpark, Azure Storage, Docker)
+This project includes four DAGs, each with specific tasks:
+Generate data and push it to Kafka.
+Retrieve data from Kafka and store it in PostgreSQL or Azure Storage as JSON, CSV, or Parquet.
+Load data from PostgreSQL and perform cleaning using PySpark.
+Conduct further data manipulation with PySpark.
+Explore the DAGs, pyspark jobs and docker compose here: GitHub link.
+![MicroBatching.png](images%2FMicroBatching.png)
+
+
 ## Financial ML
 DAG for Generating Finance Data, Preprocessing, and Using ML Techniques for Prediction
 

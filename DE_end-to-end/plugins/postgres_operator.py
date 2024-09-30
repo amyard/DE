@@ -2,6 +2,7 @@ import logging
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.utils.context import Context
 from uploader import PostgresUploader
+from concurrent.futures import ThreadPoolExecutor
 
 from faker_orders_generator import FakerGenerator
 
@@ -36,6 +37,17 @@ class CustomPostgresOperator(PostgresOperator):
                         VALUES %s;
                     """
 
-        PostgresUploader(self.postgres_conn_id, self.pg_database, users_insert_query, fake_generator.users_data).upload()
-        PostgresUploader(self.postgres_conn_id, self.pg_database, logs_insert_query, fake_generator.logs_data).upload()
-        PostgresUploader(self.postgres_conn_id, self.pg_database, orders_insert_query, fake_generator.orders_data).upload()
+        def upload_data(query, data):
+            PostgresUploader(self.postgres_conn_id, self.pg_database, query, data).upload()
+
+        # psycopg2.errors.ForeignKeyViolation: insert or update on table "logs" violates foreign key constraint "fk_user_email"
+        # DETAIL:  Key (user_email)=(ryanhoward@example.org) is not present in table "users".
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future_users = executor.submit(upload_data, users_insert_query, fake_generator.users_data)
+            future_users.result()
+
+            future_logs = executor.submit(upload_data, logs_insert_query, fake_generator.logs_data)
+            future_logs.result()
+
+            future_orders = executor.submit(upload_data, orders_insert_query, fake_generator.orders_data)
+            future_orders.result()

@@ -1,36 +1,26 @@
-import json
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 from kafka import KafkaProducer
 
+from faker_orders_generator import FakerGenerator
+from uploader import KafkaProducerUploader
+
 
 class KafkaProducerOperator(BaseOperator):
     @apply_defaults
-    def __init__(self, broker, topic, num_records, *args, **kwargs):
+    def __init__(self, broker, *args, **kwargs):
         super(KafkaProducerOperator, self).__init__(*args, **kwargs)
         self.broker = broker
-        self.topic = topic
-        self.num_records = num_records
-
-    def generate_data(self, row_numbers):
-        return "asd"
 
     def execute(self, context):
-        producer = KafkaProducer(
-            bootstrap_servers=self.broker,
-            value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-        )
+        # generate fake data
+        # fake_generator = FakerGenerator(150, 1200, 2500)
+        fake_generator = FakerGenerator(10, 10, 10)
+        fake_generator.generate()
 
-        for row_number in range(self.num_records):
-            transaction = self.generate_data(row_number)
-            producer.send(self.topic, transaction)
-            self.log.info(f"Data was send: {transaction}")
-
-        producer.flush()
-        producer.close()
-        self.log.info(f"Data {self.num_records} was sent to {self.broker}")
+        # upload fake data into kafka
+        KafkaProducerUploader(broker=self.broker, topic='logs_topic', data=fake_generator.logs_data, column_names=fake_generator.logs_columns).upload()
+        KafkaProducerUploader(broker=self.broker, topic='users_topic', data=fake_generator.users_data, column_names=fake_generator.users_columns).upload()
+        KafkaProducerUploader(broker=self.broker, topic='orders_topic', data=fake_generator.orders_data, column_names=fake_generator.orders_columns).upload()
 
 
-# class KafkaProducerOperatorPlugin(AirflowPlugin):
-#     name = "kafka_producer_operator"
-#     operators = [KafkaProducerOperator]

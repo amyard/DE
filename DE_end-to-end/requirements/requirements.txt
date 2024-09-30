@@ -5,6 +5,7 @@ apache-airflow-providers-postgres==5.12.0
 apache-airflow-providers-apache-kafka==1.6.0
 apache-airflow-providers-apache-spark==4.10.0
 kafka-python-ng # https://github.com/dpkp/kafka-python/issues/2412
+lz4==4.3.3
 pyspark==3.5.2
 azure-storage-blob==12.22.0
 python-dotenv==1.0.1

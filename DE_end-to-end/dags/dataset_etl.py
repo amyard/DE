@@ -3,7 +3,6 @@ from datetime import timedelta
 from airflow.decorators import dag, task
 from airflow.operators.empty import EmptyOperator
 from kafka_operator import KafkaProducerOperator
-# from airflow.decorators import KafkaProducerOperatorPlugin
 
 default_args = {
     'owner': 'delme',
@@ -19,20 +18,18 @@ default_args = {
     # schedule_interval=timedelta(days=1),
     schedule='@daily',
     catchup=False,
-    description="Data generator",
-    tags=['delme', 'test-dags']
+    description="ETL for dataset",
+    tags=['delme', 'dataset-etl']
 )
-def test_dags():
+def dataset_etl_dag():
     start = EmptyOperator(task_id='start')
     finish = EmptyOperator(task_id='finish')
     generate_data = KafkaProducerOperator(
         task_id='generate_data',
-        broker = 'broker:29092',
-        topic = 'test_topic',
-        num_records = 50
+        broker = 'broker:29092'
     )
 
     start >> generate_data >> finish
 
 
-test_dags()
+dataset_etl_dag()

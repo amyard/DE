@@ -3,6 +3,7 @@ USER root
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
          openjdk-17-jre-headless \
+         liblz4-tool \
          gcc python3-dev \
   && apt-get autoremove -yqq --purge \
   && apt-get clean \

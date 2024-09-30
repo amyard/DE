@@ -13,7 +13,6 @@ class KafkaProducerOperator(BaseOperator):
         self.broker = broker
 
     def execute(self, context):
-        # generate fake data
         # fake_generator = FakerGenerator(150, 1200, 2500)
         fake_generator = FakerGenerator(10, 10, 10)
         fake_generator.generate()

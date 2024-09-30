@@ -2,8 +2,12 @@ import sys
 import json
 import logging
 from abc import ABC, abstractmethod
+
 from kafka import KafkaProducer, KafkaConsumer
 from kafka.errors import NoBrokersAvailable
+
+from psycopg2.extras import execute_values
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 
 class Uploader(ABC):
@@ -76,4 +80,44 @@ class KafkaProducerUploader(Uploader):
             return consumer.bootstrap_connected()
         except NoBrokersAvailable as ex:
             logging.error(f"{ex}")
+            return False
+
+
+class PostgresUploader(Uploader):
+    def __init__(self, postgres_conn_id: str, pg_database: str, query: str, data: list[list]):
+        self.postgres_conn_id: str = postgres_conn_id
+        self.pg_database: str = pg_database
+        self.query: str = query
+        self.data: list[list] = data
+        self.hook = PostgresHook(postgres_conn_id = self.postgres_conn_id, schema = self.pg_database)
+        self.connection = self.hook.get_conn()
+
+    def upload(self):
+        if not self.validation() and not self.connection_validation():
+            return sys.exit(1)
+
+        try:
+            cursor = self.connection.cursor()
+            execute_values(cursor, self.query, self.data)
+            logging.info(f"Batch data inserted into 'users' table.")
+            self.connection.commit()
+        except Exception as e:
+            self.connection.rollback()
+            logging.error(f"Failed to insert batch data: {e}")
+            raise
+        finally:
+            cursor.close()
+            self.connection.close()
+
+    def validation(self):
+        return not self.postgres_conn_id and not self.pg_database and not self.sql and len(self.data) > 0
+
+    def connection_validation(self) -> bool:
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT 1;")
+            cursor.fetchall()
+            cursor.close()
+            return True
+        except Exception as ex:
             return False

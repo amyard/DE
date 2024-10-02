@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  postgres_client_db:
+    image: postgres:17
+    restart: always
+    container_name: postgres_client_db
+    # set shared memory limit when using docker-compose
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: clientdb
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - postgres
+
+  pgadmin:
+    image: dpage/pgadmin4:6.21
+    container_name: pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "8082:80"
+    depends_on:
+      - postgres_client_db
+    networks:
+      - postgres
+
+
+volumes:
+  pgdata:
+
+networks:
+  postgres:
+    driver: bridge

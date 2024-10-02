@@ -430,6 +430,24 @@ services:
   # SUPERSET FINISH
 
   # ADDITIONAL SERVICES START
+  postgres_client_db:
+    image: postgres:17
+    restart: always
+    container_name: postgres_client_db
+    # set shared memory limit when using docker-compose
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: clientdb
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - confluent
+
   pgadmin:
     image: dpage/pgadmin4:6.21
     container_name: pgadmin
@@ -440,6 +458,7 @@ services:
       - "8082:80"
     depends_on:
       - postgres
+      - postgres_client_db
     networks:
       - confluent
   # ADDITIONAL SERVICES FINISH
@@ -450,3 +469,4 @@ networks:
 
 volumes:
   postgres-db-volume:
+  pgdata:

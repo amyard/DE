@@ -11,6 +11,8 @@ default_args = {
     'backfill': False
 }
 
+POSTGRES_CONN_ID: str = 'delme-postgresql-clientdb'
+
 
 @dag(
     dag_id='superset_etl',
@@ -30,7 +32,7 @@ def superset_etl_dag():
     def generate_tables():
         create_users_table = PostgresOperator(
             task_id='create_users_table',
-            postgres_conn_id="delme-postgresql",
+            postgres_conn_id=POSTGRES_CONN_ID,
             sql="""
                 CREATE TABLE IF NOT EXISTS users (
                     id SERIAL PRIMARY KEY,
@@ -49,7 +51,7 @@ def superset_etl_dag():
 
         create_logs_table = PostgresOperator(
             task_id='create_logs_table',
-            postgres_conn_id="delme-postgresql",
+            postgres_conn_id=POSTGRES_CONN_ID,
             sql="""
                     CREATE TABLE IF NOT EXISTS logs (
                         id SERIAL PRIMARY KEY,
@@ -66,7 +68,7 @@ def superset_etl_dag():
 
         create_orders_table = PostgresOperator(
             task_id='create_orders_table',
-            postgres_conn_id="delme-postgresql",
+            postgres_conn_id=POSTGRES_CONN_ID,
             sql="""
                     CREATE TABLE IF NOT EXISTS orders (
                         id SERIAL PRIMARY KEY,
@@ -96,8 +98,8 @@ def superset_etl_dag():
 
     generate_data_for_postgres = CustomPostgresOperator(
         task_id='generate_data_for_postgres',
-        postgres_conn_id="delme-postgresql",
-        pg_database="postgres",
+        postgres_conn_id=POSTGRES_CONN_ID,
+        pg_database="clientdb",
         sql=""
     )
 

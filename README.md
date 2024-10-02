@@ -52,5 +52,5 @@ Check out the DAG here: https://github.com/amyard/DE/blob/master/DE_end-to-end/d
 ![TriggerOnce3.png](images%2FTriggerOnce3.png)
 ![TriggerOnce2.png](images%2FTriggerOnce2.png)
 
-`airflow connections export connection.json` - export from airflow to local
+`airflow connections export scripts/connection.json` - export from airflow to local
 `airflow connections import scripts/connection.json` - import to airflow to local

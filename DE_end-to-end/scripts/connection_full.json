@@ -1,0 +1,42 @@
+{
+  "delme-postgresql": {
+    "conn_type": "postgres",
+    "description": "",
+    "login": "airflow",
+    "password": "airflow",
+    "host": "postgres",
+    "port": 5432,
+    "schema": "postgres",
+    "extra": ""
+  },
+  "delme-postgresql-clientdb": {
+    "conn_type": "postgres",
+    "description": "",
+    "login": "admin",
+    "password": "admin",
+    "host": "postgres_client_db",
+    "port": 5432,
+    "schema": "clientdb",
+    "extra": ""
+  },
+  "delme-pyspark": {
+    "conn_type": "spark",
+    "description": "",
+    "login": "",
+    "password": null,
+    "host": "spark://spark-master",
+    "port": 7077,
+    "schema": "",
+    "extra": "{\"deploy-mode\": \"client\", \"spark-binary\": \"spark-submit\"}"
+  },
+  "delme-storage-account": {
+    "conn_type": "wasb",
+    "description": "",
+    "login": "delmestoragesaccount",
+    "password": "dBmR27FoFxRcnlLVOJJQMEpoFxtzvfFXTSe8B+EF+KgzbP+IBDnCA5RCa7bu/jrTP7V+Z2MwfhOR+AStWW4udQ==",
+    "host": "",
+    "port": null,
+    "schema": "",
+    "extra": "{\"connection_string\": \"DefaultEndpointsProtocol=https;AccountName=delmestoragesaccount;AccountKey=dBmR27FoFxRcnlLVOJJQMEpoFxtzvfFXTSe8B+EF+KgzbP+IBDnCA5RCa7bu/jrTP7V+Z2MwfhOR+AStWW4udQ==;EndpointSuffix=core.windows.net\"}"
+  }
+}

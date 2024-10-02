@@ -1,9 +1,8 @@
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
-from kafka import KafkaProducer
 
 from faker_orders_generator import FakerGenerator
-from uploader import KafkaProducerUploader
+from loader import KafkaProducerLoader
 
 
 class KafkaProducerOperator(BaseOperator):
@@ -18,8 +17,8 @@ class KafkaProducerOperator(BaseOperator):
         fake_generator.generate()
 
         # upload fake data into kafka
-        KafkaProducerUploader(broker=self.broker, topic='logs_topic', data=fake_generator.logs_data, column_names=fake_generator.logs_columns).upload()
-        KafkaProducerUploader(broker=self.broker, topic='users_topic', data=fake_generator.users_data, column_names=fake_generator.users_columns).upload()
-        KafkaProducerUploader(broker=self.broker, topic='orders_topic', data=fake_generator.orders_data, column_names=fake_generator.orders_columns).upload()
+        KafkaProducerLoader(broker=self.broker, topic='logs_topic', data=fake_generator.logs_data, column_names=fake_generator.logs_columns).upload()
+        KafkaProducerLoader(broker=self.broker, topic='users_topic', data=fake_generator.users_data, column_names=fake_generator.users_columns).upload()
+        KafkaProducerLoader(broker=self.broker, topic='orders_topic', data=fake_generator.orders_data, column_names=fake_generator.orders_columns).upload()
 
 

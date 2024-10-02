@@ -1,5 +1,4 @@
 import pendulum
-from datetime import timedelta
 from airflow.decorators import dag, task, task_group
 from airflow.operators.empty import EmptyOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
@@ -14,16 +13,16 @@ default_args = {
 
 
 @dag(
-    dag_id='test_dags',
+    dag_id='superset_etl',
     start_date=pendulum.datetime(2024, 9, 29),
     default_args=default_args,
     # schedule_interval=timedelta(days=1),
     schedule='@daily',
     catchup=False,
-    description="ETL for dataset",
-    tags=['delme', 'dataset-etl']
+    description="ETL for superset",
+    tags=['delme', 'superset-etl']
 )
-def dataset_etl_dag():
+def superset_etl_dag():
     start = EmptyOperator(task_id='start')
     finish = EmptyOperator(task_id='finish')
 
@@ -90,8 +89,8 @@ def dataset_etl_dag():
 
         create_users_table >> create_logs_table >> create_orders_table
 
-    generate_data = KafkaProducerOperator(
-        task_id='generate_data',
+    generate_data_for_kafka = KafkaProducerOperator(
+        task_id='generate_data_for_kafka',
         broker = 'broker:29092'
     )
 
@@ -104,7 +103,7 @@ def dataset_etl_dag():
 
     # start >> generate_data >> finish
     # start >> generate_tables() >> finish
-    start >> generate_data_for_postgres >> finish
+    start >> generate_tables() >> [generate_data_for_kafka, generate_data_for_postgres] >> finish
 
 
-dataset_etl_dag()
+superset_etl_dag()

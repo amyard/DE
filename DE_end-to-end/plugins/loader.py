@@ -10,7 +10,7 @@ from psycopg2.extras import execute_values
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 
-class Uploader(ABC):
+class Loader(ABC):
     @abstractmethod
     def upload(self, data):
         pass
@@ -24,7 +24,7 @@ class Uploader(ABC):
         pass
 
 
-class KafkaProducerUploader(Uploader):
+class KafkaProducerLoader(Loader):
     def __init__(self, broker, topic, data, column_names):
         self.broker: str = broker
         self.topic: str = topic
@@ -83,7 +83,7 @@ class KafkaProducerUploader(Uploader):
             return False
 
 
-class PostgresUploader(Uploader):
+class PostgresLoader(Loader):
     def __init__(self, postgres_conn_id: str, pg_database: str, query: str, data: list[list]):
         self.postgres_conn_id: str = postgres_conn_id
         self.pg_database: str = pg_database

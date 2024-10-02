@@ -2,8 +2,11 @@ import pendulum
 from airflow.decorators import dag, task, task_group
 from airflow.operators.empty import EmptyOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
+
 from kafka_operator import KafkaProducerOperator
 from postgres_operator import CustomPostgresOperator
+from faker_orders_generator import FakerGenerator
+
 
 default_args = {
     'owner': 'delme',
@@ -12,6 +15,9 @@ default_args = {
 }
 
 POSTGRES_CONN_ID: str = 'delme-postgresql-clientdb'
+LOGS_TOPIC: str = 'logs_topic'
+USERS_TOPIC: str = 'users_topic'
+ORDERS_TOPIC: str = 'orders_topic'
 
 
 @dag(
@@ -91,21 +97,35 @@ def superset_etl_dag():
 
         create_users_table >> create_logs_table >> create_orders_table
 
-    generate_data_for_kafka = KafkaProducerOperator(
-        task_id='generate_data_for_kafka',
-        broker = 'broker:29092'
-    )
+    @task_group(group_id="generate_data")
+    def generate_data():
+        # fake_generator = FakerGenerator(150, 1200, 2500)
+        fake_generator = FakerGenerator(10, 10, 10)
+        fake_generator.generate()
 
-    generate_data_for_postgres = CustomPostgresOperator(
-        task_id='generate_data_for_postgres',
-        postgres_conn_id=POSTGRES_CONN_ID,
-        pg_database="clientdb",
-        sql=""
-    )
+        generate_data_for_kafka = KafkaProducerOperator.partial(
+            task_id='generate_data_for_kafka',
+            broker = 'broker:29092'
+        ).expand_kwargs([
+            {'topic': LOGS_TOPIC, 'data': fake_generator.logs_data, 'column_names': fake_generator.logs_columns},
+            {'topic': USERS_TOPIC, 'data': fake_generator.users_data, 'column_names': fake_generator.users_columns},
+            {'topic': ORDERS_TOPIC, 'data': fake_generator.orders_data, 'column_names': fake_generator.orders_columns},
+        ])
+
+        generate_data_for_postgres = CustomPostgresOperator(
+            task_id='generate_data_for_postgres',
+            postgres_conn_id=POSTGRES_CONN_ID,
+            pg_database="clientdb",
+            sql=""
+        )
+
+        [generate_data_for_kafka, generate_data_for_postgres]
+
+    # get from postgres and kafka ---> merge ---> save into DB
 
     # start >> generate_data >> finish
     # start >> generate_tables() >> finish
-    start >> generate_tables() >> [generate_data_for_kafka, generate_data_for_postgres] >> finish
+    start >> generate_tables() >> generate_data() >> finish
 
 
 superset_etl_dag()

@@ -166,4 +166,3 @@ cython_debug/
 mock_data/
 logs/
 tmp/
-connection.json

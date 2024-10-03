@@ -1,3 +1,5 @@
+import logging
+
 import pendulum
 from airflow.decorators import dag, task, task_group
 from airflow.operators.empty import EmptyOperator
@@ -6,6 +8,9 @@ from airflow.providers.postgres.operators.postgres import PostgresOperator
 from kafka_operator import KafkaProducerOperator
 from postgres_operator import CustomPostgresOperator
 from faker_orders_generator import FakerGenerator
+from extract import KafkaConsumerExtract
+from loader import PostgresLoader
+from constants import USERS_INSERT_QUERY, LOGS_INSERT_QUERY, ORDERS_INSERT_QUERY
 
 
 default_args = {
@@ -18,6 +23,7 @@ POSTGRES_CONN_ID: str = 'delme-postgresql-clientdb'
 LOGS_TOPIC: str = 'logs_topic'
 USERS_TOPIC: str = 'users_topic'
 ORDERS_TOPIC: str = 'orders_topic'
+KAFKA_BROKER: str = 'broker:29092'
 
 
 @dag(
@@ -105,7 +111,7 @@ def superset_etl_dag():
 
         generate_data_for_kafka = KafkaProducerOperator.partial(
             task_id='generate_data_for_kafka',
-            broker = 'broker:29092'
+            broker = KAFKA_BROKER
         ).expand_kwargs([
             {'topic': LOGS_TOPIC, 'data': fake_generator.logs_data, 'column_names': fake_generator.logs_columns},
             {'topic': USERS_TOPIC, 'data': fake_generator.users_data, 'column_names': fake_generator.users_columns},
@@ -121,11 +127,38 @@ def superset_etl_dag():
 
         [generate_data_for_kafka, generate_data_for_postgres]
 
-    # get from postgres and kafka ---> merge ---> save into DB
+    @task_group(group_id="retrieve_data")
+    def retrieve_data():
+        @task(task_id='get_data_from_topic')
+        def get_data_from_topic(topic):
+            messages: list[list] = KafkaConsumerExtract(broker=KAFKA_BROKER, topic=topic).extract()
+            cleaned_messages: list[list] = [list(d.values()) for d in messages]
+            return cleaned_messages
 
-    # start >> generate_data >> finish
-    # start >> generate_tables() >> finish
-    start >> generate_tables() >> generate_data() >> finish
+        @task(task_id='store_data_from_topic')
+        def store_data_from_topic(query: str, data: list[list]):
+            if len(data) > 0:
+                PostgresLoader(POSTGRES_CONN_ID, "clientdb", query, data).upload()
+
+        users_kafka = store_data_from_topic.override(task_id=f'store_data_from_{USERS_TOPIC}')(
+            USERS_INSERT_QUERY,
+            get_data_from_topic.override(task_id=f'get_data_from_{USERS_TOPIC}')(USERS_TOPIC)
+        )
+
+        logs_kafka = store_data_from_topic.override(task_id=f'store_data_from_{LOGS_TOPIC}')(
+            LOGS_INSERT_QUERY,
+            get_data_from_topic.override(task_id=f'get_data_from_{LOGS_TOPIC}')(LOGS_TOPIC)
+        )
+
+        orders_kafka = store_data_from_topic.override(task_id=f'store_data_from_{ORDERS_TOPIC}')(
+            ORDERS_INSERT_QUERY,
+            get_data_from_topic.override(task_id=f'get_data_from_{ORDERS_TOPIC}')(ORDERS_TOPIC)
+        )
+
+        users_kafka >> logs_kafka
+        logs_kafka >> orders_kafka
+
+    start >> generate_tables() >> generate_data() >> retrieve_data() >> finish
 
 
 superset_etl_dag()

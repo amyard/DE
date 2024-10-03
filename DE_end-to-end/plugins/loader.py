@@ -99,7 +99,7 @@ class PostgresLoader(Loader):
         try:
             cursor = self.connection.cursor()
             execute_values(cursor, self.query, self.data)
-            logging.info(f"Batch data inserted into 'users' table.")
+            logging.info(f"Batch data inserted into 'users' table. {self.data}")
             self.connection.commit()
         except Exception as e:
             self.connection.rollback()

@@ -1,9 +1,11 @@
-import logging
-
 import pendulum
+
+from airflow.hooks.base import BaseHook
 from airflow.decorators import dag, task, task_group
 from airflow.operators.empty import EmptyOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+
 
 from kafka_operator import KafkaProducerOperator
 from postgres_operator import CustomPostgresOperator
@@ -19,11 +21,26 @@ default_args = {
     'backfill': False
 }
 
+def get_postgres_credentials_from_conn_id(conn_id: str) -> tuple:
+    connection = BaseHook.get_connection(conn_id)
+    login = connection.login
+    password = connection.password
+    host = connection.host
+    db_name = connection.schema
+    port = f'{connection.port}'
+
+    login = 'admin' if '*' in login else login
+    password = 'admin' if '*' in password else password
+
+    return (login, password, host, port, db_name)
+
+
 POSTGRES_CONN_ID: str = 'delme-postgresql-clientdb'
 LOGS_TOPIC: str = 'logs_topic'
 USERS_TOPIC: str = 'users_topic'
 ORDERS_TOPIC: str = 'orders_topic'
 KAFKA_BROKER: str = 'broker:29092'
+(POSTGRES_LOGIN, POSTGRES_PASSWORD, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DBNAME) = get_postgres_credentials_from_conn_id(POSTGRES_CONN_ID)
 
 
 @dag(
@@ -158,7 +175,66 @@ def superset_etl_dag():
         users_kafka >> logs_kafka
         logs_kafka >> orders_kafka
 
-    start >> generate_tables() >> generate_data() >> retrieve_data() >> finish
+    # Define application arguments
+    application_args = [
+        # Section Postgres
+        "--POSTGRES_LOGIN", POSTGRES_LOGIN,
+        "--POSTGRES_PASSWORD", POSTGRES_PASSWORD,
+        "--POSTGRES_HOST", POSTGRES_HOST,
+        "--POSTGRES_PORT", POSTGRES_PORT,
+        "--POSTGRES_DBNAME", POSTGRES_DBNAME,
+    ]
+
+    cleaning_data_silver_layer = SparkSubmitOperator(
+        task_id="cleaning_data_silver_layer",
+        conn_id="delme-pyspark",
+        application="jobs/superset_cleaning.py",
+        packages="org.postgresql:postgresql:42.7.3",
+        application_args=application_args
+    )
+
+    start >> generate_tables() >> generate_data() >> retrieve_data() >> cleaning_data_silver_layer >> finish
 
 
 superset_etl_dag()
+
+
+
+
+@dag(
+    dag_id='superset_etl_test',
+    start_date=pendulum.datetime(2024, 9, 29),
+    default_args=default_args,
+    # schedule_interval=timedelta(days=1),
+    schedule='@daily',
+    catchup=False,
+    description="ETL for superset",
+    tags=['delme', 'superset-etl']
+)
+def superset_etl_test():
+    start = EmptyOperator(task_id='start')
+    finish = EmptyOperator(task_id='finish')
+
+    # Define application arguments
+    application_args = [
+        # Section Postgres
+        "--POSTGRES_LOGIN", POSTGRES_LOGIN,
+        "--POSTGRES_PASSWORD", POSTGRES_PASSWORD,
+        "--POSTGRES_HOST", POSTGRES_HOST,
+        "--POSTGRES_PORT", POSTGRES_PORT,
+        "--POSTGRES_DBNAME", POSTGRES_DBNAME,
+    ]
+
+    cleaning_data_silver_layer = SparkSubmitOperator(
+        task_id="cleaning_data_silver_layer",
+        conn_id="delme-pyspark",
+        application="jobs/superset_cleaning.py",
+        packages="org.postgresql:postgresql:42.7.3",
+        application_args=application_args
+    )
+
+    start >> cleaning_data_silver_layer >> finish
+
+
+superset_etl_test()
+

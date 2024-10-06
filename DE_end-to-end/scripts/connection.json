@@ -47,6 +47,6 @@
     "host": "",
     "port": null,
     "schema": "",
-    "extra": "{\"connection_string\": \"DefaultEndpointsProtocol=https;AccountName=delmestoragesaccount;AccountKey=dBmR27FoFxRcnlLVOJJQMEpoFxtzvfFXTSe8B+EF+KgzbP+IBDnCA5RCa7bu/jrTP7V+Z2MwfhOR+AStWW4udQ==;EndpointSuffix=core.windows.net\"}"
+    "extra": "{\"connection_string\": \"DefaultEndpointsProtocol=https;AccountName=delmestoragesaccount;AccountKey=*****;EndpointSuffix=core.windows.net\"}"
   }
 }

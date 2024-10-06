@@ -87,8 +87,7 @@ def superset_etl_dag():
                         login_date TIMESTAMP NOT NULL,
                         logout_date TIMESTAMP NOT NULL,
                         user_email VARCHAR(255),
-                        device VARCHAR(50) NOT NULL,
-                        CONSTRAINT fk_user_email FOREIGN KEY (user_email) REFERENCES users(email) ON DELETE SET NULL
+                        device VARCHAR(50) NOT NULL
                     );
     
                     CREATE INDEX IF NOT EXISTS idx_logs_user_email ON logs(user_email);
@@ -110,8 +109,7 @@ def superset_etl_dag():
                         product_description TEXT,
                         quantity INT NOT NULL CHECK (quantity > 0),
                         unit_price DECIMAL(10, 2) NOT NULL CHECK (unit_price >= 0),
-                        total_price DECIMAL(10, 2) NOT NULL CHECK (total_price >= 0),
-                        CONSTRAINT fk_customer_email FOREIGN KEY (customer_email) REFERENCES users(email) ON DELETE SET NULL
+                        total_price DECIMAL(10, 2) NOT NULL CHECK (total_price >= 0)
                     );
     
                     CREATE INDEX IF NOT EXISTS idx_logs_user_email ON logs(user_email);
@@ -122,8 +120,8 @@ def superset_etl_dag():
 
     @task_group(group_id="generate_data")
     def generate_data():
-        # fake_generator = FakerGenerator(150, 1200, 2500)
-        fake_generator = FakerGenerator(10, 10, 10)
+        fake_generator = FakerGenerator(150, 1200, 2500)
+        # fake_generator = FakerGenerator(10, 10, 10)
         fake_generator.generate()
 
         generate_data_for_kafka = KafkaProducerOperator.partial(

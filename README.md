@@ -3,7 +3,8 @@
 In this project, we generate and store data in a database and Kafka using a custom Operator. We then retrieve data from Kafka and store it using the medallion architecture, processing it through three layers: bronze, silver, and gold. PySpark jobs handle the transformations for each layer.
 For visualization, we use Apache Superset, and everything is running in Docker containers.
 
-Check out the code here: https://github.com/amyard/DE/blob/master/DE_end-to-end/dags/superset_etl.py 
+Check out the code here: https://github.com/amyard/DE/blob/master/DE_end-to-end/dags/superset_etl.py
+
 
 ## Micro-Batching: End-to-End Project (Airflow, Kafka, PySpark, Azure Storage, Docker)
 This project includes four DAGs, each with specific tasks:
@@ -11,7 +12,8 @@ Generate data and push it to Kafka.
 Retrieve data from Kafka and store it in PostgreSQL or Azure Storage as JSON, CSV, or Parquet.
 Load data from PostgreSQL and perform cleaning using PySpark.
 Conduct further data manipulation with PySpark.
-Explore the DAGs, pyspark jobs and docker compose here: GitHub link.
+Explore the DAGs, pyspark jobs and docker compose here: https://github.com/amyard/DE/tree/master/DE_end-to-end/dags
+
 ![MicroBatching.png](images%2FMicroBatching.png)
 
 

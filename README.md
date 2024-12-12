@@ -4,7 +4,9 @@ In this project, we generate and store data in a database and Kafka using a cust
 For visualization, we use Apache Superset, and everything is running in Docker containers.
 
 Check out the code here: https://github.com/amyard/DE/blob/master/DE_end-to-end/dags/superset_etl.py
-
+![superset.gif](images%2Fsuperset.gif)
+or 
+https://youtu.be/NW_zmHJHJ18
 
 ## Micro-Batching: End-to-End Project (Airflow, Kafka, PySpark, Azure Storage, Docker)
 This project includes four DAGs, each with specific tasks:
